@@ -1,0 +1,47 @@
+---
+title: "Factorial List of Criteria Weights"
+author: "Joe Brown"
+date: "2024-09-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal 
+
+The goal of this script is to generate a list of criteria weights that can be used to weight the results of the model ensemble in a systematic experiment to find "ideal" criteria weights. We will create a factorial combination of weights for three criteria, with the sum of the weights always equaling 1. 
+
+This approach allows for the exploration of different weighting structures, where each criterion is varied systematically across a specified range (e.g., between 0 and 1) while maintaining the total weight distribution. This will provide the foundation for a systematic experiment to determine the optimal weight to assign to each criterion during the ensemble weighting process. The ultimate aim is to identify the weighting structure that best aligns the model results with targetted outcomes, such as matching the IPCC temperature projections.
+
+# Creating weight combiantions
+
+We want to use a systematic approach to generate all possible combiantions of weights, while still ensuring they add up to 1. To complete this progammatically in R we will use a **grid search** approach to explore the "weight space" efficiently. In R this can be done using `expand.grid()` which is a base function that will create a data fram from all combinations of factor variables.
+
+```{r create data frame of factorial weight combinations}
+# create df of all possible criteria weights
+criteria_wts <- expand.grid(temp_wt = seq(0, 1, by = 0.05),
+                            co2_wt = seq(0, 1, by = 0.05), 
+                            ocean_uptake_wt = seq(0, 1, by = 0.05))
+
+# filter rows with combinations that sum to 1
+criteria_wts <- criteria_wts[rowSums(criteria_wts) == 1, ]
+
+```
+
+Split the data frame into a large list.
+
+```{r split criteria weights into list}
+# create a list from the weight tuing data frame
+criteria_wts_list <- split(criteria_wts, 1:219)
+
+```
+
+Save the result.
+
+```{r}
+saveRDS(criteria_wts_list, "workflows/data/criteria_wts.RDS")
+```
+
+
