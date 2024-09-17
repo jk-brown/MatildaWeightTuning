@@ -1,0 +1,161 @@
+---
+title: "Initial Matilda Analysis"
+author: "Joe Brown"
+date: "2024-09-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal
+
+The goal to begin this analysis is to complete an initial analysis by running Matilda for 5 SSP scenarios:
+
+1. SSP1-1.9
+2. SSP1-2.6
+3. SSP2-4.5
+4. SSP3-7.0
+5. SSP5-8.5 
+
+Once the initial model runs are completed we will compute ensemble likelihood using different criteria weights. 
+
+# Set-up 
+
+## Load Libraries
+
+```{r load library, message=FALSE}
+library(matilda)
+library(tidyverse)
+library(spatstat)
+library(parallel)
+
+```
+
+# Load INI files for SSP scenarios
+
+```{r Load INI files for SSPs}
+# directory and ini names 
+ini_dir <- paste0(system.file("input", package = "hector"), "/")
+ssp119 <- paste0("hector_ssp119.ini")
+ssp126 <- paste0("hector_ssp126.ini")
+ssp245 <- paste0("hector_ssp245.ini")
+ssp370 <- paste0("hector_ssp370.ini")
+ssp585 <- paste0("hector_ssp585.ini")
+
+# Add ini files to a list 
+ssp_list <- list("SSP1-1.9" = paste0(ini_dir, ssp119), 
+                 "SSP1-2.6" = paste0(ini_dir, ssp126), 
+                 "SSP2-4.5" = paste0(ini_dir, ssp245), 
+                 "SSP3-7.0" = paste0(ini_dir, ssp370), 
+                 "SSP5-8.5" = paste0(ini_dir, ssp585)) 
+```
+
+# Build perturbed parameter set
+
+Use Matilda function to build a parameter set. 
+
+```{r perturbed parameter data frame}
+# set seed
+set.seed(123)
+
+# set sample size
+n = 20
+
+# sample parameters using one of the SSPs in `ssp_list`
+params <- generate_params(core = newcore(ssp_list[[1]]), 
+                          draws = n)
+
+```
+
+# Initial Matilda Runs
+
+## Split jobs for parallel computing
+
+```{r split params data frame into chunks}
+# split into param chunks
+param_chunks <- split(params, 1:20)
+
+```
+
+## Run Model
+
+```{r run model with parallel computing}
+# initialize cluster 
+cl <- makeCluster(detectCores() - 1)
+
+# Export requied functions and objects to the cluster
+clusterExport(cl, c("param_chunks", 
+                    "ssp_list",
+                    "newcore", 
+                    "reset",
+                    "iterate_model"))
+
+# start timer
+start_time <- Sys.time()
+
+# run the model 
+model_result <- parLapply(cl, names(ssp_list), function(ssp_name) {
+  
+  # copy ssp data to 'scenario' object
+  scenario <- ssp_list [[ssp_name]]
+  
+  # initialize core for current scenario and name it using name in ssp_list
+  core <- newcore(scenario, name = ssp_name)
+  
+  # run the model using parameter chunks 
+  result_list <- lapply(param_chunks, function(chunk) {
+    
+    reset(core)
+    
+    # run the model saving specific years and output variables
+    iterate_model(core = core, 
+                  params = chunk, 
+                  save_years = 1800:2100, 
+                  save_vars = c("gmst", 
+                                "global_tas", 
+                                "CO2_concentration", 
+                                "ocean_uptake"))
+  })
+  
+  # ensure the correct run_numbers are added to each parameter chunk
+  for (i in 2:length(result_list)) {
+    
+    # ID the max run number of the previous element in the loop
+    max_run_number <- max(result_list[[i - 1]]$run_number)
+    
+    # get continuous run_number by adding the max run-number of previous element to the run_numbers
+    # of the current element
+    result_list[[i]]$run_number <- result_list[[i]]$run_number + max_run_number
+    
+  }
+  
+  # bind chunks for each scenario
+  result <- do.call(rbind, result_list)
+  
+  # return the result list
+  return(result)
+  
+})
+
+runtime <- Sys.time() - start_time
+print(runtime)
+
+# stop cluster
+stopCluster(cl)
+
+```
+
+No we can add names to the elements and save the result.
+```{r add element names and save results}
+
+# Add scenario names to the list elements
+names(model_result) <- ssp_names
+
+# save the result
+saveRDS(model_result, "workflows/data/model_result.RDS")
+
+```
+
+The output is `model_result` -- list of Matilda outputs, one for each SSP scenario. Each result in the list contains `n` Hector runs. We saved the years 1800:2100 for the variables `global_tas`, `gmst`, `co2_concentration`, and `ocean_uptake`. The final list is saved as an `.RDS` file in the `workflows/data` directory.
