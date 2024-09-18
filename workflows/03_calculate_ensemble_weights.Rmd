@@ -1,0 +1,17 @@
+---
+title: "Computing Ensemble Likelihood Using Alternative Criteria Weights"
+author: "Joe Brown"
+date: "2024-09-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal 
+
+The goal of this script is to calculate likelihood of Matilda ensemble using different criteria weights. 
+
+Specifically, we are going to weight the model results many times with the same criteria but applying different weight to the influence of each criteria. We will complete this effort by looping the ensemble likelihood calculation procedure through a full factorial set of criteria weights that sum to 1.
+
