@@ -1,0 +1,88 @@
+---
+title: "Computing End-of-Century Temperature Metrics"
+author: "Joe Brown"
+date: "2024-09-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal
+
+The goal of this markdown file is to continue the analysis by computing end-of-century GSAT anomaly metrics from model results. 
+
+The model results need to be normalized so that end-of-century warming metrics are relative to the 1995-2015 reference period. To do this we will take advantage of a sourced function that transforms data to be relative to a reference year range. 
+
+# Load libaries, helper functions, and data
+
+## Libraries
+
+The libraries that we need for this script are the same as previous steps in the workflow. Will skip over loading these.
+
+## Loading data
+
+For this analysis we will need the initial model results. We will load other data as need.
+
+```{r Load data for scipt}
+model_results <- readRDS("data/model_result.RDS")
+
+```
+
+## Sourcing helper functions 
+
+We will want to source some helper functions for this step in the analysis. Specifically, we need the `normalize_to_reference` function which can be used to normalize data to a reference period. In this case we want to normalize `global_tas` data to the 1995-2014 reference period.
+
+```{r source helper functions}
+source("source/source_all.R")
+
+```
+
+# Normalize model results to 1995-2014 reference period
+
+```{r calculate global tas relative to 1995-2014}
+rel_model_results <- lapply(model_results, function(df) {
+  
+  # subset to only include global_tas
+  data_subset <- subset(df, 
+                        variable == "global_tas")
+  
+  # compute normalize data
+  normalized_data <- normalize_to_reference(data_subset,
+                                            var = "global_tas",
+                                            ref_start = 1995,
+                                            ref_end = 2014)
+  
+  # replace values in results with normalized data
+  data_subset$value <- normalized_data
+  
+  return(data_subset)
+})
+
+```
+
+We now have the `rel_model_results`, the `value` column in each data frame has been replaced with `global_tas` values relative to the specified reference period.
+
+# Initialize Metric 
+
+We are initializing a metric to compute the end-of-century (`2081:2100`) median warming (`global_tas`).
+
+```{r, initializing warming metric}
+warming_metric <- new_metric(var = 'global_tas', years = 2081:2100, op = median)
+
+```
+
+# Compute metrics 
+
+Using the `warming_metric` and `rel_model_results` we compute the end-of-century warming metrics for each ensemble member.
+
+```{r compute wamring metrics for each ensemble memeber}
+wamring_results <- lapply(rel_model_results, function(df){
+  
+  metric_calc(df, warming_metric)
+  
+})
+
+```
+
