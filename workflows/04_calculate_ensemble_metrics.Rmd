@@ -78,11 +78,19 @@ warming_metric <- new_metric(var = 'global_tas', years = 2081:2100, op = median)
 Using the `warming_metric` and `rel_model_results` we compute the end-of-century warming metrics for each ensemble member.
 
 ```{r compute wamring metrics for each ensemble memeber}
-wamring_results <- lapply(rel_model_results, function(df){
+warming_results <- lapply(rel_model_results, function(df){
   
   metric_calc(df, warming_metric)
   
 })
 
 ```
+
+Save the warming results:
+
+```{r save warming metric results}
+saveRDS(warming_results, "data/warming_results.RDS")
+```
+
+
 

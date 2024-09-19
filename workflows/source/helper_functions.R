@@ -21,19 +21,53 @@ normalize_to_reference <- function(data, var, ref_start, ref_end) {
   return(norm_dat)
 }
 
+# Function to merge lists
+
+# Ensure that each data frame has the 'run_number' column
+check_run_number_column <- function(df) {
+  if (!"run_number" %in% colnames(df)) {
+    stop("The 'run_number' column is missing in one of the data frames.")
+  }
+  return(df)
+}
+
+# Define a function to merge the data frames from warming_result and wts
+# Function to merge data frames
+merge_dfs <- function(weight_dfs, warming_dfs) {
+
+  merged_dfs <- lapply(names(weight_dfs), function(scenario) {
+
+    # Check if the scenario is present in both lists
+    if (scenario %in% names(warming_dfs)) {
+
+      # Merge the corresponding data frames
+      merged_df <- left_join(weight_dfs[[scenario]], warming_dfs[[scenario]], by = "run_number")
+
+      return(merged_df)
+
+    } else {
+      # If scenario not in warming_results, return the original weight data frame
+      return(weight_dfs[[scenario]])
+    }
+  })
+
+  names(merged_dfs) <- names(weight_dfs)
+
+  return(merged_dfs)
+}
+
 # Compute data summary (median and 5-95% CI)
 
-# data_summary <- function(data){
-#
-#   gsat_metric_stats <-
-#     data %>%
-#     group_by(scenario) %>%
-#     summarize(
-#       median = weighted.quantile(metric_result, w = norm_weight, probs = 0.5),
-#       lower = weighted.quantile(metric_result, w = norm_weight, probs = 0.05),
-#       upper = weighted.quantile(metric_result, w = norm_weight, probs = 0.95),
-#       .groups = "drop")
-#
-#   return(gsat_metric_stats)
-#
-# }
+data_summary_single_df <- function(df) {
+
+  # Calculate weighted quantiles for the metric_result column
+    metric_stats <-
+      df %>%
+      summarize(
+        median = weighted.quantile(metric_result, w = weights, probs = 0.5),
+        lower = weighted.quantile(metric_result, w = weights, probs = 0.05),
+        upper = weighted.quantile(metric_result, w = weights, probs = 0.95)
+      )
+
+    return(metric_stats)
+  }
