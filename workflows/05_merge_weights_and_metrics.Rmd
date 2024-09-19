@@ -1,0 +1,84 @@
+---
+title: "Merging data for weighted metrics"
+author: "Joe Brown"
+date: "2024-09-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal 
+
+Here we want to merge data to get a list of data frames with weighted metrics.
+
+We want the resulting object to be a list of lists (1-219) where each element is a list of SSP scenario data frames containing metric values and weights associated with each. The weights were those found using different combinations of criteria weights. Therefore, the result should be a list (of 219) where each element is a list of SSP scenarios with the following columns: `run_number`, `metric_result`, and `mc_weight`. For each list (1-219) the weights were calculated using a different combination of criteria weights; which can be found in the `criteria_wts` data file.
+
+
+# Load libraries, data, and source files
+
+## Libraries
+```{r load libraries}
+library(tidyverse)
+library(spatstat)
+```
+
+## Source helper functions 
+
+```{r, source helper functions}
+source("source/source_all.R")
+```
+
+## Load data
+
+```{r load data}
+weight_list <- readRDS("data/model_wts.RDS")
+metric_list <- readRDS("data/warming_results.RDS")
+criteria_weights <- readRDS("data/criteria_wts.RDS")
+
+```
+
+# Merge metrics and weights
+
+For this step we need to merge `weight_list` with `metric_list` by the `run_number` column in the data frames. 
+
+To do this we use the `merge_dfs()` function that we wrote in `helper_functions.R`.
+
+```{r merge weights and metric values}
+weighted_metric_list <- lapply(weight_list, function(sample) {
+  
+  merge_dfs(sample, metric_list)
+
+  })
+
+```
+
+```{r, merge criteria combinations and add scenario column}
+# Use Map to merge the criteria_weights with weighted_metric_list
+weighted_scenario_metrics <- Map(function(element, criteria) {
+  
+  lapply(names(element), function(name) {
+    
+    # copy data
+    df <- element[[name]]
+    
+    # Add the criteria weights as new columns
+    df$temp_wt <- criteria$temp_wt
+    df$co2_wt <- criteria$co2_wt
+    df$ocean_uptake_wt <- criteria$ocean_uptake_wt
+    
+    # add scenario names column
+    df$scenario <- name
+    
+    return(df)
+  
+    })
+  
+}, weighted_metric_list, criteria_weights)
+```
+
+```{r save the new combined data}
+saveRDS(weighted_scenario_metrics, "data/weighted_scenario_metrics.RDS")
+```
+
