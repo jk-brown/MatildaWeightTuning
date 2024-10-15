@@ -63,11 +63,26 @@ data_summary_single_df <- function(df) {
   # Calculate weighted quantiles for the metric_result column
     metric_stats <-
       df %>%
+      group_by(scenario) %>%
       summarize(
-        median = weighted.quantile(metric_result, w = weights, probs = 0.5),
-        lower = weighted.quantile(metric_result, w = weights, probs = 0.05),
-        upper = weighted.quantile(metric_result, w = weights, probs = 0.95)
+        median = weighted.quantile(metric_result, w = mc_weight, probs = 0.5),
+        lower = weighted.quantile(metric_result, w = mc_weight, probs = 0.05),
+        upper = weighted.quantile(metric_result, w = mc_weight, probs = 0.95)
       )
 
     return(metric_stats)
   }
+
+# Error calculation
+
+caculate_errors <- function(esimated_values, target_values) {
+
+  # calculate the absolute and relative error for median, lower, and upper bounds
+  abs_error <- abs(estimated_values - target_values)
+  relative_error <- absolute_error / abs(target_values)
+
+  # calculate the average error
+  avg_abs_error <- mean(abs_error)
+  avg_relative_error <- mean(relative_error)
+
+}

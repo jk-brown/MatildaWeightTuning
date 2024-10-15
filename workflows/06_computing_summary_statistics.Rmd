@@ -1,0 +1,28 @@
+---
+title: "Plotting results"
+author: "Joe Brown"
+date: "2024-09-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal
+
+Frist computing summary statistics for the weight_scenario metricss 
+
+The goal in this step of the analysis is to create a data frame of the metric results and 
+
+```{r}
+stat_summary <- lapply(weighted_scenario_metrics, function(sublist) {
+  
+  lapply(sublist, function(df) {
+    
+    data_summary_single_df(df)
+    
+  })
+})
+```
+
