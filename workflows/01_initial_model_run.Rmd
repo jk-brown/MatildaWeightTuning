@@ -25,11 +25,8 @@ Once the initial model runs are completed we will compute ensemble likelihood us
 
 ## Load Libraries
 
-```{r load library, message=FALSE}
-library(matilda)
-library(tidyverse)
-library(spatstat)
-library(parallel)
+```{r source mapping, helper functions, and libraries, message=FALSE}
+source("source/source_all.R")
 
 ```
 
@@ -154,7 +151,7 @@ No we can add names to the elements and save the result.
 names(model_result) <- ssp_names
 
 # save the result
-saveRDS(model_result, "workflows/data/model_result.RDS")
+saveRDS(model_result, "data/model_result.RDS")
 
 ```
 

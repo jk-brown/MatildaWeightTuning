@@ -1,5 +1,5 @@
 ---
-title: "Plotting results"
+title: "Computing Summary statistic and error terms"
 author: "Joe Brown"
 date: "2024-09-19"
 output: html_document
@@ -11,18 +11,67 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Goal
 
-Frist computing summary statistics for the weight_scenario metricss 
+First computing summary statistics for the temperature metrics and then using IPCC values to compute error terms for each criteria weight combination.
 
-The goal in this step of the analysis is to create a data frame of the metric results and 
+*Note: IPCC values referenced here are stored in the setup.R file* 
+
+# Compute summary statistics
+
+Use `split_data_frame` to compute summary statistics (weighted median and percentiles) for temperature metrics from each SSP scenario. 
 
 ```{r}
-stat_summary <- lapply(weighted_scenario_metrics, function(sublist) {
+stat_summary <- lapply(scenario_metrics, function(df) {
   
-  lapply(sublist, function(df) {
-    
-    data_summary_single_df(df)
-    
-  })
+  split_data <- split_data_frame(df)
+  
+  data_summary_test(split_data)
+
 })
 ```
 
+## Compute error terms
+
+Needs notes and documentation.
+
+```{r}
+error_results <- lapply(names(stat_summary), function(scenario_name) {
+  
+  scenario <- stat_summary[[scenario_name]]  # Get metric stats for the scenario
+  
+  # Process each criteria influence
+  lapply(names(scenario), function(criteria_id) {
+    metric_stats <- scenario[[criteria_id]]  # Get the data frame for the criteria
+    
+    # Retrieve corresponding IPCC values for the 'long' timescale for this scenario
+    ipcc_values_for_scenario <- ipcc_values[[scenario_name]]
+    ipcc_median <- ipcc_values_for_scenario[1]
+    ipcc_lower  <- ipcc_values_for_scenario[2]
+    ipcc_upper  <- ipcc_values_for_scenario[3]
+    
+    # Calculate the errors for each statistic (median, lower, upper)
+    median_error <- compute_error(metric_stats$median, ipcc_median)
+    lower_error  <- compute_error(metric_stats$lower, ipcc_lower)
+    upper_error  <- compute_error(metric_stats$upper, ipcc_upper)
+    
+    # Return the error results for this criteria
+    list(
+      median_error = median_error,
+      lower_error  = lower_error,
+      upper_error  = upper_error
+    )
+  })
+})
+
+```
+
+## Putting things together
+
+Where I am at now is needing to put thins together. Ideally I think the best way is a data frame with the following column:
+
+1. `scenario` - name of the SSP scenario.
+2. `temp_wt` - the weight values given to observed temperature criterion. 
+3. `co2_wt` - the weight values given to observed co2 criterion.
+4. `ocean_uptake_wt` - the weight values given to observed ocean C uptake criterion.
+5. `metric_stat_values` - the median, lower, and upper bounds from the Hector simulations. Nested in stat_summary (not sure how immediately critical these values are - don't think they are needed for ternary plot).
+6. `absolute_error` - the absolute error between the metric estimates from Hector/Matilda and IPCC values. Should be one for each criterion weight combination.
+7. `percentage_erro` - represents the percent error rather than absolute error.

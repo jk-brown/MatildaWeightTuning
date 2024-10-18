@@ -56,33 +56,64 @@ merge_dfs <- function(weight_dfs, warming_dfs) {
   return(merged_dfs)
 }
 
-# Compute data summary (median and 5-95% CI)
-
-data_summary_single_df <- function(df) {
-
-  # Calculate weighted quantiles for the metric_result column
-    metric_stats <-
-      df %>%
-      group_by(scenario) %>%
-      summarize(
-        median = weighted.quantile(metric_result, w = mc_weight, probs = 0.5),
-        lower = weighted.quantile(metric_result, w = mc_weight, probs = 0.05),
-        upper = weighted.quantile(metric_result, w = mc_weight, probs = 0.95)
-      )
-
-    return(metric_stats)
+## Splitting data based on criteria weight combinations
+split_data_frame <- function(df) {
+  # Check if df is a data frame
+  if (!is.data.frame(df)) {
+    stop("Input must be a data frame")
   }
 
-# Error calculation
+  # Check if the required columns exist
+  required_cols <- c("temp_wt", "co2_wt", "ocean_uptake_wt")
+  if (!all(required_cols %in% names(df))) {
+    stop("Data frame must contain the following columns: temp_wt, co2_wt, ocean_uptake_wt")
+  }
 
-caculate_errors <- function(esimated_values, target_values) {
+  # Split the df based on the specified columns
+  data <- split(df, list(df$temp_wt, df$co2_wt, df$ocean_uptake_wt), drop = T)
 
-  # calculate the absolute and relative error for median, lower, and upper bounds
-  abs_error <- abs(estimated_values - target_values)
-  relative_error <- absolute_error / abs(target_values)
+  return(data)
+}
 
-  # calculate the average error
-  avg_abs_error <- mean(abs_error)
-  avg_relative_error <- mean(relative_error)
+# Function to calculate summary statistics for split data frames
+data_summary_test <- function(split_data) {
 
+  # Use lapply to calculate weighted quantiles for each subset of data
+  metric_stats <- lapply(split_data, function(df) {
+
+    # Check if sub_df is a data frame
+    if (!is.data.frame(df)) {
+      stop("Each subset must be a data frame")
+    }
+
+    # Calculate weighted quantiles and return as a data frame
+    summarize(
+      df,
+      median = weighted.quantile(df$metric_result, w = df$mc_weight, probs = 0.5),
+      lower = weighted.quantile(df$metric_result, w = df$mc_weight, probs = 0.05),
+      upper = weighted.quantile(df$metric_result, w = df$mc_weight, probs = 0.95)
+    )
+  })
+
+  return(metric_stats)
+}
+
+# Error calculation function
+compute_error <- function(estimated_value, target_value) {
+
+  # Absolute error
+  absolute_error <- abs(estimated_value - target_value)
+
+  # Relative error
+  relative_error <- absolute_error / abs(target_value)
+
+  # Percentage error
+  percentage_error <- relative_error * 100
+
+  # Make a list storing all the error values
+  list(
+    absolute_error = absolute_error,
+    relative_error = relative_error,
+    percentage_error = percentage_error
+  )
 }

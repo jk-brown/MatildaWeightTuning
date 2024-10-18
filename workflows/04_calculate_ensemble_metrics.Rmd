@@ -26,23 +26,14 @@ The libraries that we need for this script are the same as previous steps in the
 For this analysis we will need the initial model results. We will load other data as need.
 
 ```{r Load data for scipt}
-model_results <- readRDS("data/model_result.RDS")
-
-```
-
-## Sourcing helper functions 
-
-We will want to source some helper functions for this step in the analysis. Specifically, we need the `normalize_to_reference` function which can be used to normalize data to a reference period. In this case we want to normalize `global_tas` data to the 1995-2014 reference period.
-
-```{r source helper functions}
-source("source/source_all.R")
+# model_result <- readRDS("data/model_result.RDS")
 
 ```
 
 # Normalize model results to 1995-2014 reference period
 
 ```{r calculate global tas relative to 1995-2014}
-rel_model_results <- lapply(model_results, function(df) {
+rel_model_results <- lapply(model_result, function(df) {
   
   # subset to only include global_tas
   data_subset <- subset(df, 
@@ -83,6 +74,8 @@ warming_results <- lapply(rel_model_results, function(df){
   metric_calc(df, warming_metric)
   
 })
+
+## TODO: Use nested lapply() here so compute the warming results for the 3 time periods. For each element in `rel_model_results` use `metric_calc()` across a list of metric elements (shirt-term - 2021-2040, mid-term - 2041-2060, long-term - 2081-2100)
 
 ```
 

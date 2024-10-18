@@ -15,24 +15,9 @@ Here we want to merge data to get a list of data frames with weighted metrics.
 
 We want the resulting object to be a list of lists (1-219) where each element is a list of SSP scenario data frames containing metric values and weights associated with each. The weights were those found using different combinations of criteria weights. Therefore, the result should be a list (of 219) where each element is a list of SSP scenarios with the following columns: `run_number`, `metric_result`, and `mc_weight`. For each list (1-219) the weights were calculated using a different combination of criteria weights; which can be found in the `criteria_wts` data file.
 
-
-# Load libraries, data, and source files
-
-## Libraries
-```{r load libraries}
-library(tidyverse)
-library(spatstat)
-library(tidyverse)
-library(matilda)
-```
-
-## Source helper functions 
-
-```{r, source helper functions}
-source("source/source_all.R")
-```
-
 ## Load data
+
+Fix this, don't need doubling data and won't have to if naming is consistent
 
 ```{r load data}
 weight_list <- readRDS("data/model_wts.RDS")
@@ -60,7 +45,7 @@ weighted_metric_list <- lapply(weight_list, function(sample) {
 # Use Map to merge the criteria_weights with weighted_metric_list
 weighted_scenario_metrics <- Map(function(element, criteria) {
   
-  lapply(names(element), function(name) {
+  data <- lapply(names(element), function(name) {
     
     # copy data
     df <- element[[name]]
@@ -77,10 +62,23 @@ weighted_scenario_metrics <- Map(function(element, criteria) {
   
     })
   
+  # combine data 
+  return_data <- do.call(rbind, data)
+  
+  # Return the combined data frame
+  return(return_data)
+  
 }, weighted_metric_list, criteria_weights)
+
+# combine all results
+combined_result <- do.call(rbind, weighted_scenario_metrics)
+
+# split by scenario
+scenario_metrics <- split(combined_result, combined_result$scenario)
+
 ```
 
 ```{r save the new combined data}
-saveRDS(weighted_scenario_metrics, "data/weighted_scenario_metrics.RDS")
+saveRDS(weighted_scenario_metrics, "data/scenario_metrics.RDS")
 ```
 

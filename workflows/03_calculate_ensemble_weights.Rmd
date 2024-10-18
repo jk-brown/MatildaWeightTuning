@@ -17,43 +17,17 @@ Specifically, we are going to weight the model results many times with the same 
 
 We will perform this procedure with parallel computing by looping through criteria weight values for each iteration. This will substitute a new set of criteria weights with each run. 
 
-# Load libraries and data 
-
-## Libraries
-
-```{r Load libraries}
-library(matilda)
-library(tidyverse)
-library(parallel)
-
-```
-
 ## Load data
 
 We are loading the model results and the criteria weights.
 
-```{r load data from workflow/data directory}
-model_results <- readRDS("data/model_result.RDS")
-criteria_weights <- readRDS("data/criteria_wts.RDS")
+```{r load data from data directory}
+# model_result <- readRDS("data/model_result.RDS")
+# criteria_weights_list <- readRDS("data/criteria_wts.RDS")
 
 ```
 
-Additionally, we want to bring in uncertainty data for each criterion. 
-
-- GMST uncertainty is the SD of GMST and is available where HadCRUT5 data are downloaded.
-- MLO atmos CO2 concentration uncertainty = 0.12 and is consistent across entire time series. 
-- Ocean C uptake uncertainty from GCB data = 0.4 and is consistent across entire time series.
-
-The GMST data is located in the `wokflows/raw-data` directory and should be stored as a vector of uncertainty values. Source the `criterion_mapping.R` file to load all uncertainty vectors. 
-
-Here, we source all files in `workflows/source` directory.
-
-```{r source scripts that build new criterion and load uncertainty}
-source("source/source_all.R")
-
-```
-
-# Weight Ensembles 
+## Weight Ensembles 
 
 ```{r weight model ensembles with different criteria weights}
 
@@ -61,19 +35,19 @@ source("source/source_all.R")
 cl <- makeCluster(detectCores() - 1)
 
 # export functions and objects to weight ensembles
-clusterExport(cl, c("score_runs", "score_bayesian", "criterion_co2_obs", "criterion_ocean_uptake", "criterion_temp", "model_results", "criteria_weights", "co2_unc", "gmst_unc", "ocean_uptake_unc", "multi_criteria_weighting"))
+clusterExport(cl, c("score_runs", "score_bayesian", "criterion_co2_obs", "criterion_ocean_uptake", "criterion_temp", "model_result", "criteria_weights_list", "co2_unc", "gmst_unc", "ocean_uptake_unc", "multi_criteria_weighting"))
 
 # start time
 start_time <- Sys.time()
 
 # run likelihood weighting with parLapply
-weight_results <- parLapply(cl, criteria_weights, function(weight_combo_df) {
+weight_results <- parLapply(cl, criteria_weights_list, function(weight_combo_df) {
   
   # numeric vector of weight combinations
   weight_combo <- as.numeric(weight_combo_df)
   
   # loop across each criteria weight combinations to compute ensemble weights for each combination
-  wts_res <- lapply(model_results, function(df) {
+  wts_res <- lapply(model_result, function(df) {
     
     # scores from co2
     wts_co2 = score_runs(df, 
@@ -117,6 +91,6 @@ print(time_elapsed)
 Save the weights which will be merged with metrics in a future step:
 
 ```{r}
-saveRDS(weight_results, "data/model_wts.RDS")
+saveRDS(weight_results, "data/weight_results.RDS")
 ```
 

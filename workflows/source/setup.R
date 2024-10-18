@@ -27,3 +27,9 @@ ipcc_370_long <- c(2.76, 2.00, 3.75)
 ipcc_585_short <- c(0.76, 0.51, 1.04)
 ipcc_585_mid <- c(1.54, 1.08, 2.08)
 ipcc_585_long <- c(3.50, 2.44, 4.82)
+
+ipcc_values <- list(ssp_names[1] = ipcc_119_long,
+                    ssp_names[2] = ipcc_126_long,
+                    ssp_names[3] = ipcc_245_long,
+                    ssp_names[4] = ipcc_370_long,
+                    ssp_names[5] = ipcc_585_long)
