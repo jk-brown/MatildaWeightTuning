@@ -25,7 +25,7 @@ Once the initial model runs are completed we will compute ensemble likelihood us
 
 ## Load Libraries
 
-```{r source mapping, helper functions, and libraries, message=FALSE}
+```{r source mapping, helper functions, and libraries, message = FALSE}
 source("source/source_all.R")
 
 ```
@@ -58,7 +58,7 @@ Use Matilda function to build a parameter set.
 set.seed(123)
 
 # set sample size
-n = 20
+n = 100
 
 # sample parameters using one of the SSPs in `ssp_list`
 params <- generate_params(core = newcore(ssp_list[[1]]), 
@@ -72,7 +72,7 @@ params <- generate_params(core = newcore(ssp_list[[1]]),
 
 ```{r split params data frame into chunks}
 # split into param chunks
-param_chunks <- split(params, 1:20)
+param_chunks <- split(params, 1:50)
 
 ```
 

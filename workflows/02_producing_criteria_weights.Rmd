@@ -17,7 +17,7 @@ This approach allows for the exploration of different weighting structures, wher
 
 # Creating weight combiantions
 
-We want to use a systematic approach to generate all possible combinations of weights, while still ensuring they add up to 1. To complete this pragmatically in R we will use a **grid search** approach to explore the "weight space" efficiently. In R this can be done using `expand.grid()` which is a base function that will create a data fram from all combinations of factor variables.
+We want to use a systematic approach to generate all possible combinations of weights, while still ensuring they add up to 1. To complete this pragmatically in R we will use a **grid search** approach to explore the "weight space" efficiently. In R this can be done using `expand.grid()` which is a base function that will create a data frame from all combinations of factor variables.
 
 ```{r create data frame of factorial weight combinations}
 # create df of all possible criteria weights
