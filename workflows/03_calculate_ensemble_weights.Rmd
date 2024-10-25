@@ -94,38 +94,38 @@ print(time_elapsed)
 Filter out ensembles with weights near-zero == 10e-6
 
 ```{r}
-# filter out ensemble members that do not meet the minimum weight constraint (> 1e-6)
-constrained_weights <- lapply(weight_results, function(criteria_level) {
-  
-  # iterate over the SSP level
-  lapply(criteria_level, function(scenario_level) {
-    
-    filtered_result <- subset(scenario_level, mc_weight > 1e-6)
-    
-    return(filtered_result)
-    
-  })
-  
-})
-
-# Re-weight to sum to one
-final_ensemble_weights <- lapply(weight_results, function(criteria_level) {
-  
-  # loop over the scenario level
-  lapply(criteria_level, function(scenario_level) {
-    
-    # calculate the total weight for unique run_numbers
-    total_weight <- sum(scenario_level$mc_weight[!duplicated(scenario_level$run_number)])
-    
-    # normalize the weight values
-    scenario_level$norm_weight <- scenario_level$mc_weight / total_weight
-    
-    return(scenario_level)
-    
-  })
-  
-  
-})
+# # filter out ensemble members that do not meet the minimum weight constraint (> 1e-6)
+# constrained_weights <- lapply(weight_results, function(criteria_level) {
+#   
+#   # iterate over the SSP level
+#   lapply(criteria_level, function(scenario_level) {
+#     
+#     filtered_result <- subset(scenario_level, mc_weight > 1e-6)
+#     
+#     return(filtered_result)
+#     
+#   })
+#   
+# })
+# 
+# # Re-weight to sum to one
+# final_ensemble_weights <- lapply(weight_results, function(criteria_level) {
+#   
+#   # loop over the scenario level
+#   lapply(criteria_level, function(scenario_level) {
+#     
+#     # calculate the total weight for unique run_numbers
+#     total_weight <- sum(scenario_level$mc_weight[!duplicated(scenario_level$run_number)])
+#     
+#     # normalize the weight values
+#     scenario_level$norm_weight <- scenario_level$mc_weight / total_weight
+#     
+#     return(scenario_level)
+#     
+#   })
+#   
+#   
+# })
 ```
 
 
