@@ -132,6 +132,6 @@ Filter out ensembles with weights near-zero == 10e-6
 Save the weights which will be merged with metrics in a future step:
 
 ```{r}
-saveRDS(final_ensemble_weights, "data/weight_results.RDS")
+saveRDS(weight_results, "data/weight_results.RDS")
 ```
 

@@ -35,9 +35,11 @@ ipcc_585_short <- c(0.76, 0.51, 1.04)
 ipcc_585_mid <- c(1.54, 1.08, 2.08)
 ipcc_585_long <- c(3.50, 2.44, 4.82)
 
-# editing names of IPCC labels
-ipcc_values <- list("SSP1-1.9" = ipcc_119_long,
-                    "SSP1-2.6" = ipcc_126_long,
-                    "SSP2-4.5" = ipcc_245_long,
-                    "SSP3-7.0" = ipcc_370_long,
-                    "SSP5-8.5" = ipcc_585_long)
+# Nesting IPCC values by scenario and term
+ipcc_term_values <- list(
+  "SSP1-1.9" = list(short = ipcc_119_short, mid = ipcc_119_mid, long = ipcc_119_long),
+  "SSP1-2.6" = list(short = ipcc_126_short, mid = ipcc_126_mid, long = ipcc_126_long),
+  "SSP2-4.5" = list(short = ipcc_245_short, mid = ipcc_245_mid, long = ipcc_245_long),
+  "SSP3-7.0" = list(short = ipcc_370_short, mid = ipcc_370_mid, long = ipcc_370_long),
+  "SSP5-8.5" = list(short = ipcc_585_short, mid = ipcc_585_mid, long = ipcc_585_long)
+)

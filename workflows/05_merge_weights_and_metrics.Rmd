@@ -20,9 +20,10 @@ We want the resulting object to be a list of lists (1-219) where each element is
 Fix this, don't need doubling data and won't have to if naming is consistent
 
 ```{r load data}
-weight_list <- readRDS("data/model_wts.RDS")
-metric_list <- readRDS("data/warming_results.RDS")
-criteria_weights <- readRDS("data/criteria_wts.RDS")
+# # weight_list = 
+# # weight_list <- readRDS("data/model_wts.RDS")
+# metric_list <- readRDS("data/warming_results.RDS")
+# criteria_weights <- readRDS("data/criteria_wts.RDS")
 
 ```
 
@@ -33,9 +34,9 @@ For this step we need to merge `weight_list` with `metric_list` by the `run_numb
 To do this we use the `merge_dfs()` function that we wrote in `helper_functions.R`.
 
 ```{r merge weights and metric values}
-weighted_metric_list <- lapply(weight_list, function(sample) {
+weighted_metric_list <- lapply(weight_results, function(sample) {
   
-  merge_dfs(sample, metric_list)
+  merge_dfs(sample, warming_results)
 
   })
 
@@ -68,7 +69,7 @@ weighted_scenario_metrics <- Map(function(element, criteria) {
   # Return the combined data frame
   return(return_data)
   
-}, weighted_metric_list, criteria_weights)
+}, weighted_metric_list, criteria_weights_list)
 
 # combine all results
 combined_result <- do.call(rbind, weighted_scenario_metrics)

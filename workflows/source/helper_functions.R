@@ -33,25 +33,25 @@ check_run_number_column <- function(df) {
 
 # Define a function to merge the data frames from warming_result and wts
 # Function to merge data frames
-merge_dfs <- function(weight_dfs, warming_dfs) {
+merge_dfs <- function(weight_list, warming_list) {
 
-  merged_dfs <- lapply(names(weight_dfs), function(scenario) {
+  merged_dfs <- lapply(names(weight_list), function(scenario) {
 
     # Check if the scenario is present in both lists
-    if (scenario %in% names(warming_dfs)) {
+    if (scenario %in% names(warming_list)) {
 
       # Merge the corresponding data frames
-      merged_df <- left_join(weight_dfs[[scenario]], warming_dfs[[scenario]], by = "run_number")
+      merged_df <- left_join(weight_list[[scenario]], warming_list[[scenario]], by = "run_number")
 
       return(merged_df)
 
     } else {
       # If scenario not in warming_results, return the original weight data frame
-      return(weight_dfs[[scenario]])
+      return(weight_list[[scenario]])
     }
   })
 
-  names(merged_dfs) <- names(weight_dfs)
+  names(merged_dfs) <- names(weight_list)
 
   return(merged_dfs)
 }
@@ -75,24 +75,27 @@ split_data_frame <- function(df) {
   return(data)
 }
 
-# Function to calculate summary statistics for split data frames
+# Function to calculate summary statistics, nested by "term" (short, mid, long)
 data_summary_test <- function(split_data) {
 
-  # Use lapply to calculate weighted quantiles for each subset of data
+  # Apply summary calculations for each criteria weight combination
   metric_stats <- lapply(split_data, function(df) {
 
-    # Check if sub_df is a data frame
-    if (!is.data.frame(df)) {
-      stop("Each subset must be a data frame")
-    }
+    # Split further by "term" within each criteria weight combination
+    term_split <- split(df, df$term)
 
-    # Calculate weighted quantiles and return as a data frame
-    summarize(
-      df,
-      median = weighted.quantile(df$metric_result, w = df$mc_weight, probs = 0.5),
-      lower = weighted.quantile(df$metric_result, w = df$mc_weight, probs = 0.05),
-      upper = weighted.quantile(df$metric_result, w = df$mc_weight, probs = 0.95)
-    )
+    # Compute summary statistics for each term (short, mid, long)
+    term_stats <- lapply(term_split, function(term_df) {
+      summarize(
+        term_df,
+        median = weighted.quantile(term_df$metric_result, w = term_df$mc_weight, probs = 0.5),
+        lower  = weighted.quantile(term_df$metric_result, w = term_df$mc_weight, probs = 0.05),
+        upper  = weighted.quantile(term_df$metric_result, w = term_df$mc_weight, probs = 0.95)
+      )
+    })
+
+    return(term_stats)
+
   })
 
   return(metric_stats)

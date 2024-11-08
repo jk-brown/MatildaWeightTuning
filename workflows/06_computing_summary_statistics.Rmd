@@ -34,46 +34,50 @@ stat_summary <- lapply(scenario_metrics, function(df) {
 Needs notes and documentation.
 
 ```{r}
+# Compute error results using lapply
 error_results <- lapply(names(stat_summary), function(scenario_name) {
   
-  scenario <- stat_summary[[scenario_name]]  # Get metric stats for the scenario
+  scenario <- stat_summary[[scenario_name]]  # Get metrics for the scenario
   
-  # Process each criteria influence
+  # Use lapply for criteria weight combinations
   error_by_criteria_id <- lapply(names(scenario), function(criteria_id) {
-    metric_stats <- scenario[[criteria_id]]  # Get the data frame for the criteria
-    
-    # Retrieve corresponding IPCC values for the 'long' timescale for this scenario
-    ipcc_values_for_scenario <- ipcc_values[[scenario_name]]
-    ipcc_median <- ipcc_values_for_scenario[1]
-    ipcc_lower  <- ipcc_values_for_scenario[2]
-    ipcc_upper  <- ipcc_values_for_scenario[3]
-    
-    # Calculate the errors for each statistic (median, lower, upper)
-    median_error <- compute_error(metric_stats$median, ipcc_median)
-    lower_error  <- compute_error(metric_stats$lower, ipcc_lower)
-    upper_error  <- compute_error(metric_stats$upper, ipcc_upper)
-    
-    # compute error for current criteria weight combo
-    median_error = median_error
-    lower_error  = lower_error
-    upper_error  = upper_error
+    criteria_data <- scenario[[criteria_id]]  # Get the data frame for the criteria
+
+    # Use lapply for term lengths and calculate errors
+    error_by_term <- lapply(names(criteria_data), function(term_length) {
+      metric_stats <- criteria_data[[term_length]]  # Get the metric stats for the term length
       
-    # Return error results as a data frame with error
-    data.frame(
-      criteria_id, 
-      median_error = median_error,
-      lower_error = lower_error, 
-      upper_error = upper_error
-    )
+      # Retrieve corresponding IPCC values for this scenario and term length
+      ipcc_values_for_scenario <- ipcc_term_values[[scenario_name]][[term_length]]
+      
+      # Calculate the errors for each statistic (median, lower, upper)
+      median_error <- compute_error(metric_stats$median, ipcc_values_for_scenario[1])
+      lower_error  <- compute_error(metric_stats$lower, ipcc_values_for_scenario[2])
+      upper_error  <- compute_error(metric_stats$upper, ipcc_values_for_scenario[3])
+      
+      # Return error results as a data frame
+      data.frame(
+        criteria_id = criteria_id,
+        term_length = term_length,
+        median_error = median_error$percentage_error,  # Adjust if you want to include all error types
+        lower_error = lower_error$percentage_error,
+        upper_error = upper_error$percentage_error
+      )
+    })
+    
+    # Combine results for each term length into one data frame
+    bind_error <- do.call(rbind, error_by_term)
+    
+    return(bind_error)  # Return the combined data frame for the criteria
   })
   
-  # criteria list for each scenario
-  bind_error <- do.call(rbind, error_by_criteria_id) 
+  # Combine all criteria results for the scenario into one data frame
+  bind_criteria_error <- do.call(rbind, error_by_criteria_id)
 
-  # return
-  return(bind_error)
+  return(bind_criteria_error)  # Return the combined data frame for the scenario
   
 })
+
 
 # Set top level names of list to match IPCC naming
 names(error_results) <- ssp_names
@@ -90,7 +94,7 @@ Where I am at now is needing to put thins together. Ideally I think the best way
 4. `ocean_uptake_wt` - the weight values given to observed ocean C uptake criterion.
 5. `metric_stat_values` - the median, lower, and upper bounds from the Hector simulations. Nested in stat_summary (not sure how immediately critical these values are - don't think they are needed for ternary plot).
 6. `absolute_error` - the absolute error between the metric estimates from Hector/Matilda and IPCC values. Should be one for each criterion weight combination.
-7. `percentage_erro` - represents the percent error rather than absolute error.
+7. `percentage_error` - represents the percent error rather than absolute error.
 
 Where are these pieces of data currently?:
 
@@ -104,26 +108,26 @@ Where are these pieces of data currently?:
 
 
 ```{r}
-# building data frame for plotting 
+# building data frame for each SSP to plot
 
-# scratch data frame with SSP scenarios, repeating for the know number of criteria combinations (total rows = 219 x 5) 
-scenario_df <- data.frame(scenario = rep(ssp_names, each = 219))
+plotting_list <- lapply(names(error_results), function(df_name) {
+  
+  data = error_results[[df_name]]
+  
+  data$temp_wt = rep(criteria_weights$temp_wt, each = 3)
+  data$CO2_wt = rep(criteria_weights$co2_wt, each = 3)
+  data$ocean_uptake_wt = rep(criteria_weights$ocean_uptake_wt, each = 3)
 
-# Binding together all criterion weights and repeating for each scenario (total rows 1095)
-bind_criteria_weights <- do.call(rbind, criteria_weights)
-criteria_weights_df <- bind_criteria_weights[rep(1:nrow(bind_criteria_weights), times = 5), ]
+  return(data)  
+})
 
-# Binding together error results for each scenario (total rows 1095)
-bind_error_results <- do.call(rbind, error_results)
-
-# combining columns for plotting 
-plot_df <- cbind(scenario_df, criteria_weights_df, bind_error_results)
-
+# Set top level names of list to match IPCC naming
+names(plotting_list) <- ssp_names
 ```
 
 Save plotting data:
 ```{r}
 # save plot data 
-saveRDS(plot_df, "data/plot_data.rds")
+saveRDS(plotting_list, "data/plotting_list.rds")
 ```
 

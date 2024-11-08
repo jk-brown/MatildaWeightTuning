@@ -19,10 +19,11 @@ Plot results in ternary plot that shows the error associated with different nume
 Testing out ternary plot code:
 ```{r}
 # Create the ternary plot with error as color
-ggtern(data = plot_df, aes(x = temp_wt, y = co2_wt, z = ocean_uptake_wt, color = median_error.percentage_error)) +
+ggtern(data = plotting_list$`SSP1-1.9`, aes(x = temp_wt, y = CO2_wt, z = ocean_uptake_wt, color = median_error)) +
   geom_point(size = 3, shape = 15) +
   scale_color_gradient(low = "blue", high = "red") +
   theme_showarrows() +
+  theme_hidetitles() +
   xlab("Temperature Weight") +
   ylab("CO2 Weight") +
   zlab("Ocean C Uptake Weight") +
@@ -30,6 +31,9 @@ ggtern(data = plot_df, aes(x = temp_wt, y = co2_wt, z = ocean_uptake_wt, color =
     title = "Error of central value",
     color = "Percent Error"
   ) +
-  facet_wrap(~scenario)
+  facet_wrap(~term_length)
+
+ggsave("example_figure.png", 
+       device = "png")
 
 ```

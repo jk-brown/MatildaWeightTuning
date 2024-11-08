@@ -60,8 +60,13 @@ We now have the `rel_model_results`, the `value` column in each data frame has b
 We are initializing a metric to compute the end-of-century (`2081:2100`) median warming (`global_tas`).
 
 ```{r, initializing warming metric}
-warming_metric <- new_metric(var = 'global_tas', years = 2081:2100, op = median)
+long_warming_metric <- new_metric(var = 'global_tas', years = 2081:2100, op = median)
+mid_warming_metric <- new_metric(var = 'global_tas', years = 2041:2060, op = median)
+short_warming_metric <- new_metric(var = 'global_tas', years = 2021:2040, op = median)
 
+metric_list <- list('long' = long_warming_metric, 
+                    'mid' = mid_warming_metric, 
+                    'short' = short_warming_metric)
 ```
 
 # Compute metrics 
@@ -71,11 +76,28 @@ Using the `warming_metric` and `rel_model_results` we compute the end-of-century
 ```{r compute wamring metrics for each ensemble memeber}
 warming_results <- lapply(rel_model_results, function(df){
   
-  metric_calc(df, warming_metric)
+  # setNames of the metric elements to match the names of the metrics used for calculation
+  # loop across each element of the rel_model_results and use each metric in metric list to compute metric results 
+  metric_result = setNames(lapply(names(metric_list), function(metric_name) {
+    
+    # store each metric object for current iteration
+    metric = metric_list[[metric_name]]
+    
+    # use metric and model data of current iteration to compute metrics
+    result = metric_calc(df, metric)
+    
+    # Add a column indicating the name of the metric (for binding later)
+    result$term = metric_name
+    
+    return(result)
+    
+  }), names(metric_list)) # specify what names should be used to name the elements of the result
+  
+  metric_result_bind <- do.call(rbind, metric_result)
+    
+  return(metric_result_bind)
   
 })
-
-## TODO: Use nested lapply() here so compute the warming results for the 3 time periods. For each element in `rel_model_results` use `metric_calc()` across a list of metric elements (shirt-term - 2021-2040, mid-term - 2041-2060, long-term - 2081-2100)
 
 ```
 
