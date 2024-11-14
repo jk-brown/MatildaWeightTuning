@@ -19,10 +19,12 @@ Plot results in ternary plot that shows the error associated with different nume
 Testing out ternary plot code:
 ```{r}
 # Create the ternary plot with error as color
-ggtern(data = plotting_list$`SSP1-1.9`, aes(x = temp_wt, y = CO2_wt, z = ocean_uptake_wt, color = median_error)) +
-  geom_point(size = 3, shape = 15) +
+ggtern(data = subset(plotting_list$`SSP1-1.9`, term_length == "short"), aes(x = temp_wt, y = CO2_wt, z = ocean_uptake_wt, color = median_error)) +
+  geom_point(size = 1, shape = 15) +
   scale_color_gradient(low = "blue", high = "red") +
+  theme_light() +
   theme_showarrows() +
+  theme_arrowlarge() +
   theme_hidetitles() +
   xlab("Temperature Weight") +
   ylab("CO2 Weight") +
@@ -30,10 +32,32 @@ ggtern(data = plotting_list$`SSP1-1.9`, aes(x = temp_wt, y = CO2_wt, z = ocean_u
   labs(
     title = "Error of central value",
     color = "Percent Error"
-  ) +
-  facet_wrap(~term_length)
+  )
 
 ggsave("example_figure.png", 
-       device = "png")
+       device = "png", 
+       height = 4.5, 
+       width = 7.29, 
+       units = "in")
 
 ```
+```{r}
+term_lengths_list <- list("short", "mid", "long")
+error <- list("median_error", "lower_error", "upper_error")
+
+lapply(names(plotting_list), function(scenario_names) {
+
+  data = plotting_list[[scenario_names]]
+    
+  lapply(term_lengths_list, function(term_length) {
+    
+    lapply(error, function(error_term) {
+    
+      plot_ternary(data, term_length = term_length, error = data[[error_term]], 
+               filepath = paste0("figures/", scenario_names, "_", term_length, "_", error_term, ".png"))
+      
+    })
+  })
+})
+```
+

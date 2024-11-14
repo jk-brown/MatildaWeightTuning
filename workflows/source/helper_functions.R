@@ -120,3 +120,49 @@ compute_error <- function(estimated_value, target_value) {
     percentage_error = percentage_error
   )
 }
+
+
+
+# Plot Ternary ------------------------------------------------------------
+
+plot_ternary <- function(data, term_length, error,
+                         height = 4.5,
+                         width = 7.29,
+                         units = "in",
+                         device = "png",
+                         dpi = "300",
+                         filepath) {
+
+  # Subset the data based on term_length
+  filtered_data <- subset(data, term_length == term_length)
+
+  # Add the error column to filtered_data
+  filtered_data$error_column <- error
+
+  # Debugging: Check lengths to make sure they match
+  print(paste("Filtered data rows:", nrow(filtered_data)))
+  print(paste("Error length:", length(error)))
+
+  # Plot with ggtern
+  ggtern(data = filtered_data,
+         aes(x = temp_wt,
+             y = CO2_wt,
+             z = ocean_uptake_wt,
+             color = error_column)) +  # Use error_column created above
+    geom_point(size = 1, shape = 15) +
+    scale_color_gradient(low = "blue", high = "red") +
+    theme_showarrows() +
+    theme_hidetitles() +
+    theme_hidelabels() +
+    theme(legend.position = "none") +
+    xlab("Temperature Weight") +
+    ylab("CO2 Weight") +
+    zlab("Ocean C Uptake Weight")
+
+  # Save the plot
+  ggsave(filepath,
+         device = device,
+         height = height,
+         width = width,
+         units = units)
+}

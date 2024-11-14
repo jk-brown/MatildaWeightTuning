@@ -61,7 +61,8 @@ error_results <- lapply(names(stat_summary), function(scenario_name) {
         term_length = term_length,
         median_error = median_error$percentage_error,  # Adjust if you want to include all error types
         lower_error = lower_error$percentage_error,
-        upper_error = upper_error$percentage_error
+        upper_error = upper_error$percentage_error, 
+        cumulative_error = median_error$percentage_error + lower_error$percentage_error + upper_error$percentage_error
       )
     })
     
