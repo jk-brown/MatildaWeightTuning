@@ -126,8 +126,8 @@ compute_error <- function(estimated_value, target_value) {
 # Plot Ternary ------------------------------------------------------------
 
 plot_ternary <- function(data, term_length, error,
-                         height = 4.5,
-                         width = 7.29,
+                         height = 4,
+                         width = 6,
                          units = "in",
                          device = "png",
                          dpi = "300",
@@ -149,12 +149,13 @@ plot_ternary <- function(data, term_length, error,
              y = CO2_wt,
              z = ocean_uptake_wt,
              color = error_column)) +  # Use error_column created above
-    geom_point(size = 1, shape = 15) +
+    geom_point(size = 4, shape = 15) +
     scale_color_gradient(low = "blue", high = "red") +
-    theme_showarrows() +
+    theme_bvbw(base_size = 16) +
     theme_hidetitles() +
-    theme_hidelabels() +
+    theme_arrowlarge() +
     theme(legend.position = "none") +
+    theme(plot.margin = grid:: unit(c(0,0,0,0), "mm")) +
     xlab("Temperature Weight") +
     ylab("CO2 Weight") +
     zlab("Ocean C Uptake Weight")
