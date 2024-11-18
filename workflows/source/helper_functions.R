@@ -125,45 +125,59 @@ compute_error <- function(estimated_value, target_value) {
 
 # Plot Ternary ------------------------------------------------------------
 
-plot_ternary <- function(data, term_length, error,
-                         height = 4,
-                         width = 6,
-                         units = "in",
-                         device = "png",
-                         dpi = "300",
-                         filepath) {
+plot_ternary <- function(data, term_length, error, height = 4, width = 6, units = "in", device = "png", dpi = 300, filepath) {
+
+  # Convert term_length in data to factor and make sure term_length is categorical
+  data$term_length <- factor(data$term_length, levels = c("short", "mid", "long"))
 
   # Subset the data based on term_length
-  filtered_data <- subset(data, term_length == term_length)
+  filtered_data <- data[data$term_length == term_length, ]
 
-  # Add the error column to filtered_data
-  filtered_data$error_column <- error
+  # Subset the error vector based on the filtered data rows
+  filtered_error <- error[data$term_length == term_length]
 
-  # Debugging: Check lengths to make sure they match
+  # Debugging: Check filtered data and error lengths
+  print(paste("Expected term_length:", term_length))
+  print(paste("Unique term_length in filtered data:", unique(filtered_data$term_length)))
   print(paste("Filtered data rows:", nrow(filtered_data)))
-  print(paste("Error length:", length(error)))
+  print(paste("Filtered error length:", length(filtered_error)))
+  print("Filtered error values head:")
+  print(head(filtered_error))
+
+  # Check error length consistency with filtered data
+  if (length(filtered_error) == nrow(filtered_data)) {
+    filtered_data$error_column <- filtered_error
+  } else {
+    stop("Error vector length does not match filtered data rows")
+  }
 
   # Plot with ggtern
-  ggtern(data = filtered_data,
-         aes(x = temp_wt,
-             y = CO2_wt,
-             z = ocean_uptake_wt,
-             color = error_column)) +  # Use error_column created above
+  plot <- ggtern(data = filtered_data,
+                 aes(x = temp_wt,
+                     y = CO2_wt,
+                     z = ocean_uptake_wt,
+                     color = error_column)) +
     geom_point(size = 4, shape = 15) +
     scale_color_gradient(low = "blue", high = "red") +
     theme_bvbw(base_size = 16) +
     theme_hidetitles() +
     theme_arrowlarge() +
     theme(legend.position = "none") +
-    theme(plot.margin = grid:: unit(c(0,0,0,0), "mm")) +
+    theme(plot.margin = grid::unit(c(0, 0, 0, 0), "mm")) +
     xlab("Temperature Weight") +
     ylab("CO2 Weight") +
     zlab("Ocean C Uptake Weight")
 
   # Save the plot
-  ggsave(filepath,
+  ggsave(filename = filepath,
+         plot = plot,
          device = device,
          height = height,
          width = width,
-         units = units)
+         units = units,
+         dpi = dpi)
+  print(paste("Saved plot to", filepath))
 }
+
+
+
