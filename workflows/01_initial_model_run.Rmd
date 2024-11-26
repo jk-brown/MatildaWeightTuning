@@ -51,14 +51,14 @@ ssp_list <- list("SSP1-1.9" = paste0(ini_dir, ssp119),
 
 # Build perturbed parameter set
 
-Use Matilda function to build a parameter set. 
+Use Matilda function to build a parameter set. This is scenario-agnostic? it shoud be.
 
 ```{r perturbed parameter data frame}
 # set seed
 set.seed(123)
 
 # set sample size
-n = 100
+n = 200
 
 # sample parameters using one of the SSPs in `ssp_list`
 params <- generate_params(core = newcore(ssp_list[[1]]), 
@@ -151,7 +151,7 @@ No we can add names to the elements and save the result.
 names(model_result) <- ssp_names
 
 # save the result
-saveRDS(model_result, "data/model_result.RDS")
+saveRDS(model_result, "data/model_result_2.RDS")
 
 ```
 

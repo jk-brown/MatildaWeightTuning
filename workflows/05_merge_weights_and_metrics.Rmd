@@ -34,52 +34,66 @@ For this step we need to merge `weight_list` with `metric_list` by the `run_numb
 To do this we use the `merge_dfs()` function that we wrote in `helper_functions.R`.
 
 ```{r merge weights and metric values}
-weighted_metric_list <- lapply(weight_results, function(sample) {
+# Merge constrained weights with warming results
+weighted_metric_list <- lapply(constrained_weights, function(criterion_level) {
   
-  merge_dfs(sample, warming_results)
+  # Iterate over scenarios in both warming_results and the current criterion level
+  merged_scenarios <- Map(function(scenario_weights, scenario_results) {
+    
+    # Iterate over term lengths (data frames within each scenario)
+    lapply(scenario_results, function(term_length_df) {
+      
+      # Merge term length results with the corresponding weights
+      merged <- merge(term_length_df, scenario_weights, by = "run_number")
+      return(merged)
+    })
+    
+  }, criterion_level, warming_results) # Align the criterion level with warming_results by scenario
+  
+  return(merged_scenarios)
+})
 
-  })
 
 ```
 
 ```{r, merge criteria combinations and add scenario column}
-# Use Map to merge the criteria_weights with weighted_metric_list
-weighted_scenario_metrics <- Map(function(element, criteria) {
-  
-  data <- lapply(names(element), function(name) {
-    
-    # copy data
-    df <- element[[name]]
-    
-    # Add the criteria weights as new columns
-    df$temp_wt <- criteria$temp_wt
-    df$co2_wt <- criteria$co2_wt
-    df$ocean_uptake_wt <- criteria$ocean_uptake_wt
-    
-    # add scenario names column
-    df$scenario <- name
-    
-    return(df)
-  
-    })
-  
-  # combine data 
-  return_data <- do.call(rbind, data)
-  
-  # Return the combined data frame
-  return(return_data)
-  
-}, weighted_metric_list, criteria_weights_list)
-
-# combine all results
-combined_result <- do.call(rbind, weighted_scenario_metrics)
-
-# split by scenario
-scenario_metrics <- split(combined_result, combined_result$scenario)
+# # Use Map to merge the criteria_weights with weighted_metric_list
+# weighted_scenario_metrics <- Map(function(element, criteria) {
+#   
+#   data <- lapply(names(element), function(name) {
+#     
+#     # copy data
+#     df <- element[[name]]
+#     
+#     # Add the criteria weights as new columns
+#     df$temp_wt <- criteria$temp_wt
+#     df$co2_wt <- criteria$co2_wt
+#     df$ocean_uptake_wt <- criteria$ocean_uptake_wt
+#     
+#     # add scenario names column
+#     df$scenario <- name
+#     
+#     return(df)
+#   
+#     })
+#   
+#   # combine data 
+#   return_data <- do.call(rbind, data)
+#   
+#   # Return the combined data frame
+#   return(return_data)
+#   
+# }, weighted_metric_list, criteria_weights_list)
+# 
+# # combine all results
+# combined_result <- do.call(rbind, weighted_scenario_metrics)
+# 
+# # split by scenario
+# scenario_metrics <- split(combined_result, combined_result$scenario)
 
 ```
 
 ```{r save the new combined data}
-saveRDS(weighted_scenario_metrics, "data/scenario_metrics.RDS")
+#saveRDS(weighted_scenario_metrics, "data/scenario_metrics.RDS")
 ```
 

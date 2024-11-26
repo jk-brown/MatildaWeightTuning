@@ -41,7 +41,8 @@ ggsave("example_figure.png",
        units = "in")
 
 ```
-```{r}
+
+```{r, results='hide'}
 term_lengths_list <- list("short", "mid", "long")
 error <- list("median_error", "lower_error", "upper_error")
 
@@ -62,5 +63,68 @@ lapply(names(plotting_list), function(scenario_names) {
     })
   })
 })
+```
+
+
+### Identifying best criterion weight values
+
+What I am trying to do -- subset the data by rules:
+rule 1: median values less than 5 (within the +/- 5% range of IPCC)
+rule 2: upper and lower values less that 10 (within the +/- 10% range of IPCC)
+
+```{r}
+# Generate a list of data frames containing the lowest error row for each term_length and scenario
+lowest_error_list <- lapply(plotting_list, function(scenario) {
+
+  # Define the term lengths
+  term_lengths <- c("short", "mid", "long")
+
+  # Process each term_length individually
+  term_results <- lapply(term_lengths, function(term) {
+    
+    # Filter rows for the specific term_length and where lower_error and upper_error are both less than 10
+    filtered_data <- subset(scenario, term_length == term & lower_error < 30 & upper_error < 30 & median_error < 15)
+
+    # Return the resulting row (or empty data frame) for this term_length
+    return(filtered_data)
+  })
+
+  # Name each element in the list by its term length (short, mid, long)
+  names(term_results) <- term_lengths
+  
+  # Return the list of data frames for each term_length in this scenario
+  return(term_results)
+})
+
+```
+
+df of best results for each scenario term length:
+```{r}
+term_lengths <- c("2021-2040", "2041-2060", "2061-2100")
+
+closest_IPCC <- data.frame(
+  "scenario" = c(rep(ssp_names, each = 3)),
+  "term" = c(rep(term_lengths))
+)
+
+median_values <- c(stat_summary$`SSP1-1.9`$`0.3.0.0.7`$short$median, 
+                   stat_summary$`SSP1-1.9`$`0.3.0.0.7`$mid$median,
+                   stat_summary$`SSP1-1.9`$`0.4.0.0.6`$long$median,
+                   stat_summary$`SSP1-2.6`$`0.35.0.15.0.5`$short$median,
+                   stat_summary$`SSP1-2.6`$`0.25.0.0.75`$short$median
+                   
+                   )
+
+lower_values <- c(stat_summary$`SSP1-1.9`$`0.3.0.0.7`$short$lower, 
+                  stat_summary$`SSP1-1.9`$`0.3.0.0.7`$mid$lower, 
+                  stat_summary$`SSP1-1.9`$`0.4.0.0.6`$long$lower,
+                  stat_summary$`SSP1-2.6`$`0.35.0.15.0.5`$short$lower)
+
+upper_values <- c(stat_summary$`SSP1-1.9`$`0.3.0.0.7`$short$upper, 
+                  stat_summary$`SSP1-1.9`$`0.3.0.0.7`$mid$upper, 
+                  stat_summary$`SSP1-1.9`$`0.4.0.0.6`$long$upper, 
+                  stat_summary$`SSP1-2.6`$`0.35.0.15.0.5`$short$upper)
+
+merge(closest_IPCC, )
 ```
 

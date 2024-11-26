@@ -34,7 +34,7 @@ Split the data frame into a large list.
 
 ```{r split criteria weights into list}
 # create a list from the weight tuning data frame
-criteria_weights_list <- split(criteria_weights, 1:219)
+criteria_weights_list <- split(criteria_weights, seq(nrow(criteria_weights)))
 
 ```
 

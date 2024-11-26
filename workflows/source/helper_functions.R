@@ -35,26 +35,29 @@ check_run_number_column <- function(df) {
 # Function to merge data frames
 merge_dfs <- function(weight_list, warming_list) {
 
+  # Merge the data frames for each scenario
   merged_dfs <- lapply(names(weight_list), function(scenario) {
 
     # Check if the scenario is present in both lists
     if (scenario %in% names(warming_list)) {
 
-      # Merge the corresponding data frames
+      # Merge the corresponding data frames based on 'run_number'
       merged_df <- left_join(weight_list[[scenario]], warming_list[[scenario]], by = "run_number")
 
       return(merged_df)
 
     } else {
-      # If scenario not in warming_results, return the original weight data frame
+      # If the scenario is not in warming_results, return the original weight data frame
       return(weight_list[[scenario]])
     }
   })
 
+  # Ensure the merged list is named based on the original weight_list
   names(merged_dfs) <- names(weight_list)
 
   return(merged_dfs)
 }
+
 
 ## Splitting data based on criteria weight combinations
 split_data_frame <- function(df) {
@@ -88,9 +91,9 @@ data_summary_test <- function(split_data) {
     term_stats <- lapply(term_split, function(term_df) {
       summarize(
         term_df,
-        median = weighted.quantile(term_df$metric_result, w = term_df$mc_weight, probs = 0.5),
-        lower  = weighted.quantile(term_df$metric_result, w = term_df$mc_weight, probs = 0.05),
-        upper  = weighted.quantile(term_df$metric_result, w = term_df$mc_weight, probs = 0.95)
+        median = quantile(term_df$metric_result, probs = 0.5),
+        lower  = quantile(term_df$metric_result, probs = 0.05),
+        upper  = quantile(term_df$metric_result, probs = 0.95)
       )
     })
 

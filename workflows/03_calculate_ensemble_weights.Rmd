@@ -49,13 +49,6 @@ weight_results <- parLapply(cl, criteria_weights_list, function(weight_combo_df)
   # loop across each criteria weight combinations to compute ensemble weights for each combination
   wts_res <- lapply(model_result, function(df) {
     
-    # scores from co2
-    wts_co2 = score_runs(df, 
-                         criterion = criterion_co2_obs(), 
-                         score_function = score_bayesian, 
-                         sigma = co2_unc)
-    wts_co2 = na.omit(wts_co2)
-    
     # scores from temp
     wts_temp = score_runs(df, 
                           criterion = criterion_temp, 
@@ -63,15 +56,22 @@ weight_results <- parLapply(cl, criteria_weights_list, function(weight_combo_df)
                           sigma = gmst_unc)
     wts_temp = na.omit(wts_temp)
     
+    # scores from co2
+    wts_co2 = score_runs(df, 
+                         criterion = criterion_co2_obs(), 
+                         score_function = score_bayesian, 
+                         sigma = co2_unc)
+    wts_co2 = na.omit(wts_co2)
+    
     # scores from ocean_uptake 
     wts_oc_uptake = score_runs(df, 
                                criterion = criterion_ocean_uptake,
                                score_function = score_bayesian,
                                sigma = ocean_uptake_unc)
-    wts_temp = na.omit(wts_temp)
+    wts_oc_uptake = na.omit(wts_oc_uptake)
     
     # score list 
-    score_list = list(wts_co2, wts_temp, wts_oc_uptake)
+    score_list = list(wts_temp, wts_co2, wts_oc_uptake)
     
     # multi-criteria scores
     multi_criteria_weighting(score_list, weight_combo)
@@ -91,42 +91,114 @@ time_elapsed <- end_time - start_time
 print(time_elapsed)
 
 ```
-Filter out ensembles with weights near-zero == 10e-6
+Filter out ensembles
 
 ```{r}
-# # filter out ensemble members that do not meet the minimum weight constraint (> 1e-6)
-# constrained_weights <- lapply(weight_results, function(criteria_level) {
+# add run number to params 
+params$run_number <- 1:nrow(params)
+
+# merge the weight_results with params
+weighted_param_sets <- lapply(weight_results, function(criteria_level) {
+  
+  lapply(criteria_level, function(scenario_level) {
+    
+    # merge df with params
+    weighted_params <- merge(params, scenario_level, by = "run_number")
+    
+    return(weighted_params)
+  })
+})
+
+# Select the top 40% of parameter sets based on their mc_weight
+constrained_param_set <- lapply(weighted_param_sets, function(criteria_level) {
+
+  lapply(criteria_level, function(scenario_level) {
+
+    # Calculate the threshold for the top half
+    top <- quantile(scenario_level$mc_weight, probs = 0.6, na.rm = TRUE)
+
+    # Filter for rows with mc_weight greater than or equal to the threshold
+    top_40_per <- scenario_level[scenario_level$mc_weight >= top, ]
+
+    return(top_40_per)
+  })
+})
+
+
+# Select the top 40% of weights based on their mc_weight
+constrained_weights <- lapply(weight_results, function(criteria_level) {
+
+  lapply(criteria_level, function(scenario_level) {
+
+    # Calculate the threshold for the top half
+    top <- quantile(scenario_level$mc_weight, probs = 0.6, na.rm = TRUE)
+
+    # Filter for rows with mc_weight greater than or equal to the threshold
+    top_40_per <- scenario_level[scenario_level$mc_weight >= top, ]
+
+    return(top_40_per)
+  })
+})
+
+# # Iterate over criteria levels in weight_results
+# constrained_model_result <- lapply(weight_results, function(criteria_level) {
 #   
-#   # iterate over the SSP level
-#   lapply(criteria_level, function(scenario_level) {
+#   # Iterate over scenarios in each criteria level
+#   lapply(criteria_level, function(scenario_weights) {
 #     
-#     filtered_result <- subset(scenario_level, mc_weight > 1e-6)
-#     
-#     return(filtered_result)
-#     
+#     # Map each scenario weight to the corresponding model result
+#     lapply(model_result, function(model_scenario) {
+#       
+#       # Merge model result with weights by "run_number"
+#       merged_result <- merge(model_scenario, scenario_weights, by = "run_number", all.x = TRUE)
+#       
+#       return(merged_result)
+#     })
 #   })
-#   
 # })
-# 
+
+
+```
+
+```{r}
 # # Re-weight to sum to one
-# final_ensemble_weights <- lapply(weight_results, function(criteria_level) {
-#   
+# weight_results <- lapply(constrained_weights, function(criteria_level) {
+# 
 #   # loop over the scenario level
 #   lapply(criteria_level, function(scenario_level) {
-#     
+# 
 #     # calculate the total weight for unique run_numbers
 #     total_weight <- sum(scenario_level$mc_weight[!duplicated(scenario_level$run_number)])
-#     
+# 
 #     # normalize the weight values
 #     scenario_level$norm_weight <- scenario_level$mc_weight / total_weight
-#     
+# 
 #     return(scenario_level)
-#     
+# 
 #   })
-#   
-#   
+# 
+# 
 # })
 ```
+
+# # Re-weight to sum to one
+# weight_results <- lapply(constrained_weights, function(criteria_level) {
+# 
+#   # loop over the scenario level
+#   lapply(criteria_level, function(scenario_level) {
+# 
+#     # calculate the total weight for unique run_numbers
+#     total_weight <- sum(scenario_level$mc_weight[!duplicated(scenario_level$run_number)])
+# 
+#     # normalize the weight values
+#     scenario_level$norm_weight <- scenario_level$mc_weight / total_weight
+# 
+#     return(scenario_level)
+# 
+#   })
+# 
+# 
+# })
 
 
 Save the weights which will be merged with metrics in a future step:

@@ -7,11 +7,13 @@
 ## Temperature (GMST) needs to be updated to include data from 1850:2024 -- the current GMST criterion is from 1950:2021.
 
 ## Temperature criterion
-temp_data <- read.csv("raw_data/gmst_anomaly_hadcrut5.csv")
+temp_data <- read.csv("raw_data/gmst_anomaly_hadcrut5.csv") %>%
+  subset(year %in% 1850:2020)
 criterion_temp <- new_criterion("gmst", years = temp_data$year, obs_values = temp_data$value)
 
 ## Ocean carbon uptake criterion
-ocean_uptake_data <- read.csv("raw_data/annual_ocean_c_uptake.csv")
+ocean_uptake_data <- read.csv("raw_data/annual_ocean_c_uptake.csv") %>%
+  subset(year %in% 1850:2020)
 criterion_ocean_uptake <- new_criterion("ocean_uptake", years = ocean_uptake_data$year, obs_values = ocean_uptake_data$value)
 
 ## remove the data from global environment to avoid confusion
@@ -25,7 +27,8 @@ rm(ocean_uptake_data)
 
 ## Global Mean Surface Temperature
 # Load GMST uncertainty data
-gmst_unc <- read.csv("raw_data/annual_gmst_SD_quant.csv")
+gmst_unc <- read.csv("raw_data/annual_gmst_SD_quant.csv") %>%
+  subset(Year %in% 1850:2020)
 
 # vector of uncertainty values
 gmst_unc <- gmst_unc$value

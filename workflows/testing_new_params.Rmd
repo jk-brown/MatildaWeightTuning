@@ -1,0 +1,227 @@
+---
+title: "Re-run Matilda"
+author: "Joe Brown"
+date: "2024-11-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal
+
+
+```{r}
+# lowest error weight_list:
+
+lowest_errorlapply(lowest)
+```
+
+Combine the best weights list to the initial params:
+```{r}
+weighted_params_list <- lapply(best_weight_result_list, function(scenario) {
+  
+  params$run_number <- 1:nrow(params)
+  
+  weighted_params <- merge(params, scenario, by = "run_number")
+  
+  return(weighted_params)
+  
+})
+```
+
+Select the top 100 params
+```{r}
+top_params <- lapply(weighted_params_list, function(weighted_params){
+  
+  ranked_params <- weighted_params[order(-weighted_params$mc_weight), ]
+  
+  top_100 <- head(ranked_params, 100)
+  
+  top_100 <- select(top_100, -mc_weight, -run_number)
+  
+  return(top_100)
+})
+```
+
+Re-run Matilda using the newly identified "top" parameter sets
+
+```{r}
+params_list <- top_params
+
+# Initialize cluster
+cl <- makeCluster(detectCores() - 1)
+
+# Export required functions and objects to the cluster
+clusterExport(cl, c("params_list", "ssp_list", "newcore", "reset", "iterate_model"))
+
+# Start timer
+start_time <- Sys.time()
+
+# Run the model for each parameter set
+new_model_result <- parLapply(cl, names(params_list), function(param_name) {
+  
+  # Extract current parameter set and its SSP scenario
+  params <- params_list[[param_name]]  # Parameter set
+  ssp_name <- sub("_.*", "", param_name)  # Extract SSP from param_name (e.g., "SSP1-1.9")
+  
+  # Get the associated INI file for this SSP
+  scenario <- ssp_list[[ssp_name]]
+  
+  # Initialize Hector core
+  core <- newcore(scenario, name = param_name)  # Use param_name to ensure uniqueness
+  
+  # Split the parameter set into chunks
+  param_chunks <- split(params, 1:50)  # Adjust chunking if necessary
+  
+  # Run the model using parameter chunks
+  result_list <- lapply(param_chunks, function(chunk) {
+    
+    reset(core)
+    
+    # Run the model and save outputs
+    iterate_model(core = core, 
+                  params = chunk, 
+                  save_years = 1800:2100, 
+                  save_vars = c("gmst", "global_tas", "CO2_concentration", "ocean_uptake"))
+  })
+  
+  # Ensure the correct run numbers are added to each parameter chunk
+  for (i in 2:length(result_list)) {
+    max_run_number <- max(result_list[[i - 1]]$run_number)
+    result_list[[i]]$run_number <- result_list[[i]]$run_number + max_run_number
+  }
+  
+  # Combine chunks into a single result for this parameter set
+  result <- do.call(rbind, result_list)
+  
+  # Tag results with parameter set name
+  result$param_set <- param_name
+  
+  return(result)
+})
+
+# Stop timer
+runtime <- Sys.time() - start_time
+print(runtime)
+
+# Stop the cluster
+stopCluster(cl)
+```
+
+# Normalize model results to 1995-2014 reference period
+
+```{r calculate global tas relative to 1995-2014}
+new_rel_model_results <- lapply(new_model_result, function(df) {
+  
+  # subset to only include global_tas
+  data_subset <- subset(df, 
+                        variable == "global_tas")
+  
+  # compute normalize data
+  normalized_data <- normalize_to_reference(data_subset,
+                                            var = "global_tas",
+                                            ref_start = 1995,
+                                            ref_end = 2014)
+  
+  # replace values in results with normalized data
+  data_subset$value <- normalized_data
+  
+  return(data_subset)
+})
+
+```
+
+We now have the `rel_model_results`, the `value` column in each data frame has been replaced with `global_tas` values relative to the specified reference period.
+
+# Compute metrics 
+
+Using the `warming_metric` and `rel_model_results` we compute the end-of-century warming metrics for each ensemble member.
+
+```{r compute wamring metrics for each ensemble member}
+new_warming_results <- lapply(new_rel_model_results, function(df) {
+  
+  # Extract the term (short, medium, long) from the scenario column
+  df$term <- gsub(".*_(short|mid|long)$", "\\1", df$scenario)
+  
+  # Apply different metric calculation based on the extracted term
+  if ("short" %in% df$term) {
+    new_metrics <- metric_calc(df %>% filter(term == "short"), metric_list$short)
+  } else if ("mid" %in% df$term) {
+    new_metrics <- metric_calc(df %>% filter(term == "mid"), metric_list$mid)
+  } else if ("long" %in% df$term) {
+    new_metrics <- metric_calc(df %>% filter(term == "long"), metric_list$long)
+  }
+  
+  return(new_metrics)
+})
+```
+
+Compute median and CI to compare with IPCC:
+```{r}
+new_summary_stats <- lapply(new_warming_results, function(df) {
+  
+  summary_stats <- df %>% 
+    summarize(
+      median = quantile(metric_result, probs = 0.5), 
+      lower = quantile(metric_result, probs = 0.05), 
+      upper = quantile(metric_result, probs = 0.95)) %>% 
+    ungroup()
+
+  return (summary_stats)
+  
+})
+```
+
+
+
+## Test 
+
+```{r}
+test_params <- constrained_param_set$`1`[["SSP1-1.9"]]
+
+test_params <- select(test_params, -mc_weight, -run_number)
+
+```
+
+```{r}
+ini_test <- ssp_list$`SSP1-1.9` 
+reset(core_test)
+core_test <- newcore(ini_test, name = "SSP1-1.9")
+
+test_result <- iterate_model(core = core_test, 
+                             params = test_params, 
+                             save_years = 1800:2100, 
+                             save_vars = "global_tas")
+
+test_result <- test_result %>% 
+  mutate(
+    value = normalize_to_reference(test_result, var = "global_tas", 1995, 2014))
+
+#metrics 
+long <- new_metric(var = "global_tas", years = 2081:2100, op = median)
+metric_test <- metric_calc(test_result, metric = long)
+metric_test <- merge(test_params, metric_test, by = "run_number")
+metric_test_2 <- metric_calc(constrained_result, metric = short)
+metric_test_2 <- merge(constrained_result, metric_test_2, by = "run_number")
+
+quantile(metric_test_2$metric_result, probs = c(0.05, 0.5, 0.95))
+quantile(metric_test$metric_result, probs = c(0.05, 0.5, 0.95))
+
+```
+
+```{r}
+constrained_result <- merge(rel_model_results$`SSP1-1.9`, constrained_weights$`1`$`SSP1-1.9`, by = "run_number")
+
+
+
+
+ggplot() +
+  geom_line(data = test_result,
+            aes(x = year, y = value, group = run_number)) +
+  geom_line(data = constrained_result, 
+            aes(x = year, y = value, group = run_number), 
+            color = 'red')
+```
+

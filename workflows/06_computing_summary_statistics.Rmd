@@ -20,12 +20,24 @@ First computing summary statistics for the temperature metrics and then using IP
 Use `split_data_frame` to compute summary statistics (weighted median and percentiles) for temperature metrics from each SSP scenario. 
 
 ```{r}
-stat_summary <- lapply(scenario_metrics, function(df) {
+stat_summary <- lapply(weighted_metric_list, function(criterion_level) {
   
-  split_data <- split_data_frame(df)
-  
-  data_summary_test(split_data)
-
+  lapply(criterion_level, function(scenario_level) {
+    
+    lapply(scenario_level, function(term_df){
+      
+    lower = quantile(term_df$metric_result, probs = 0.05)
+    median = quantile(term_df$metric_result, probs = 0.5)
+    upper = quantile(term_df$metric_result, probs = 0.95)
+    
+    stats = data.frame(
+      lower = lower,
+      median = median, 
+      upper = upper)
+    
+    return(stats)
+    })
+  })
 })
 ```
 
@@ -34,56 +46,136 @@ stat_summary <- lapply(scenario_metrics, function(df) {
 Needs notes and documentation.
 
 ```{r}
-# Compute error results using lapply
-error_results <- lapply(names(stat_summary), function(scenario_name) {
+error_results <- lapply(names(stat_summary), function(criterion_name) {
   
-  scenario <- stat_summary[[scenario_name]]  # Get metrics for the scenario
-  
-  # Use lapply for criteria weight combinations
-  error_by_criteria_id <- lapply(names(scenario), function(criteria_id) {
-    criteria_data <- scenario[[criteria_id]]  # Get the data frame for the criteria
-
-    # Use lapply for term lengths and calculate errors
-    error_by_term <- lapply(names(criteria_data), function(term_length) {
-      metric_stats <- criteria_data[[term_length]]  # Get the metric stats for the term length
+  lapply(names(stat_summary[[criterion_name]]), function(scenario_name) {
+    
+    lapply(names(stat_summary[[criterion_name]][[scenario_name]]), function(term_name) {
       
-      # Retrieve corresponding IPCC values for this scenario and term length
-      ipcc_values_for_scenario <- ipcc_term_values[[scenario_name]][[term_length]]
+      # Retrieve the statistics for this term length
+      stat_data <- stat_summary[[criterion_name]][[scenario_name]][[term_name]]
+      
+      # Retrieve the corresponding IPCC values for this scenario and term length
+      ipcc_values_for_scenario <- ipcc_term_values[[scenario_name]][[term_name]]
       
       # Calculate the errors for each statistic (median, lower, upper)
-      median_error <- compute_error(metric_stats$median, ipcc_values_for_scenario[1])
-      lower_error  <- compute_error(metric_stats$lower, ipcc_values_for_scenario[2])
-      upper_error  <- compute_error(metric_stats$upper, ipcc_values_for_scenario[3])
+      median_error <- compute_error(stat_data$median, ipcc_values_for_scenario[1])
+      lower_error  <- compute_error(stat_data$lower, ipcc_values_for_scenario[2])
+      upper_error  <- compute_error(stat_data$upper, ipcc_values_for_scenario[3])
       
-      # Return error results as a data frame
-      data.frame(
-        criteria_id = criteria_id,
-        term_length = term_length,
-        median_error = median_error$percentage_error,  # Adjust if you want to include all error types
+      # Return error results as a named list or data frame
+      error_data <- data.frame(
+        criterion = criterion_name,
+        scenario = scenario_name,
+        term_length = term_name,
+        median_error = median_error$percentage_error,
         lower_error = lower_error$percentage_error,
-        upper_error = upper_error$percentage_error, 
-        cumulative_error = median_error$percentage_error + lower_error$percentage_error + upper_error$percentage_error
+        upper_error = upper_error$percentage_error,
+        cumulative_error = median_error$percentage_error + 
+                           lower_error$percentage_error + 
+                           upper_error$percentage_error
       )
+      
+      return(error_data)
     })
-    
-    # Combine results for each term length into one data frame
-    bind_error <- do.call(rbind, error_by_term)
-    
-    return(bind_error)  # Return the combined data frame for the criteria
   })
-  
-  # Combine all criteria results for the scenario into one data frame
-  bind_criteria_error <- do.call(rbind, error_by_criteria_id)
-
-  return(bind_criteria_error)  # Return the combined data frame for the scenario
-  
 })
 
+# Flatten the nested list structure into a single data frame
+flat_error_results <- do.call(rbind, lapply(error_results, function(criterion_level) {
+  do.call(rbind, lapply(criterion_level, function(scenario_level) {
+    do.call(rbind, scenario_level)
+  }))
+}))
 
-# Set top level names of list to match IPCC naming
-names(error_results) <- ssp_names
+# Optionally, reset row names if desired
+rownames(flat_error_results) <- NULL
+
+# # Compute error results using lapply
+# error_results <- lapply(names(stat_summary), function(scenario_name) {
+#   
+#   scenario <- stat_summary[[scenario_name]]  # Get metrics for the scenario
+#   
+#   # Use lapply for criteria weight combinations
+#   error_by_criteria_id <- lapply(names(scenario), function(criteria_id) {
+#     criteria_data <- scenario[[criteria_id]]  # Get the data frame for the criteria
+# 
+#     # Use lapply for term lengths and calculate errors
+#     error_by_term <- lapply(names(criteria_data), function(term_length) {
+#       metric_stats <- criteria_data[[term_length]]  # Get the metric stats for the term length
+#       
+#       # Retrieve corresponding IPCC values for this scenario and term length
+#       ipcc_values_for_scenario <- ipcc_term_values[[scenario_name]][[term_length]]
+#       
+#       # Calculate the errors for each statistic (median, lower, upper)
+#       median_error <- compute_error(metric_stats$median, ipcc_values_for_scenario[1])
+#       lower_error  <- compute_error(metric_stats$lower, ipcc_values_for_scenario[2])
+#       upper_error  <- compute_error(metric_stats$upper, ipcc_values_for_scenario[3])
+#       
+#       # Return error results as a data frame
+#       data.frame(
+#         criteria_id = criteria_id,
+#         term_length = term_length,
+#         median_error = median_error$percentage_error,  # Adjust if you want to include all error types
+#         lower_error = lower_error$percentage_error,
+#         upper_error = upper_error$percentage_error, 
+#         cumulative_error = median_error$percentage_error + lower_error$percentage_error + upper_error$percentage_error
+#       )
+#     })
+#     
+#     # Combine results for each term length into one data frame
+#     bind_error <- do.call(rbind, error_by_term)
+#     
+#     return(bind_error)  # Return the combined data frame for the criteria
+#   })
+#   
+#   # Combine all criteria results for the scenario into one data frame
+#   bind_criteria_error <- do.call(rbind, error_by_criteria_id)
+# 
+#   return(bind_criteria_error)  # Return the combined data frame for the scenario
+#   
+# })
+# 
+# 
+# # Set top level names of list to match IPCC naming
+# names(error_results) <- ssp_names
 
 ```
+
+```{r}
+# Step 1: Filter the data based on your error criteria
+filtered_errors <- flat_error_results %>%
+  filter(median_error < 5, lower_error < 10, upper_error < 10)
+
+# Step 2: For each SSP-term_length combination, select the row with the lowest cumulative error
+# If there are no records after filtering, we will use the row with the lowest cumulative_error
+best_errors <- flat_error_results %>%
+  group_by(scenario, term_length) %>%
+  # First try to pick the best records based on filtering criteria
+  mutate(filtered = scenario %in% filtered_errors$scenario & term_length %in% filtered_errors$term_length) %>%
+  filter(filtered | (is.na(filtered) & !duplicated(scenario) & !duplicated(term_length))) %>%
+  slice_min(order_by = cumulative_error, n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+# Check if all combinations are covered
+missing_combinations <- setdiff(paste(flat_error_results$scenario, flat_error_results$term_length), 
+                                paste(best_errors$scenario, best_errors$term_length))
+
+if(length(missing_combinations) > 0) {
+  # if any combinations are missing, take the row with the lowest cumulative error for those combinations
+  print("Some combinations were not fully filtered, here are the combinations missing")
+  print(missing_combinations)
+} else {
+  print("All SSP-term combinations are present in the filtered data")
+}
+
+# Display the best errors
+print(best_errors)
+
+
+
+```
+
 
 ## Putting things together
 

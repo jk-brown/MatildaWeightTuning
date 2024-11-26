@@ -92,10 +92,8 @@ warming_results <- lapply(rel_model_results, function(df){
     return(result)
     
   }), names(metric_list)) # specify what names should be used to name the elements of the result
-  
-  metric_result_bind <- do.call(rbind, metric_result)
     
-  return(metric_result_bind)
+  return(metric_result)
   
 })
 
